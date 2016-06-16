@@ -35,16 +35,15 @@ namespace GlacierBackup.Writers
             if(string.Equals(result.Vault, "photos", StringComparison.OrdinalIgnoreCase))
             {
                 _writer.WriteLine($"    UPDATE photo.photo ");
-                _writer.WriteLine($"       SET aws_region = '{result.Region}',");
-                _writer.WriteLine($"           aws_vault = '{result.Vault}',");
-                _writer.WriteLine($"           aws_archive_id = 'result.Result.ArchiveId',");
-                _writer.WriteLine($"           aws_treehash = 'result.Result.Checksum'");
+                _writer.WriteLine($"       SET aws_glacier_vault_id = (SELECT id FROM aws.glacier_vault WHERE region = '{result.Region.SystemName}' AND vault_name = '{result.Vault}'),");
+                _writer.WriteLine($"           aws_archive_id = '{result.Result?.ArchiveId}',");
+                _writer.WriteLine($"           aws_treehash = '{result.Result?.Checksum}'");
                 _writer.WriteLine($"     WHERE src_path = '/images/{result.Backup.GlacierDescription}';");
                 _writer.WriteLine();
             }
             else
             {
-                _writer.WriteLine($"{result.Backup.GlacierDescription} - id: id, hash: hash");
+                _writer.WriteLine($"{result.Region.SystemName}|{result.Vault}|{result.Backup.GlacierDescription}|{result.Result?.ArchiveId}|{result.Result?.Checksum}");
             }    
         }
 

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Amazon;
+using GlacierBackup.FileSearchers;
 using GlacierBackup.Writers;
 
 
@@ -17,6 +18,8 @@ namespace GlacierBackup
         readonly string _backupSource;
         readonly string _relativeRoot;
         readonly IResultWriter _resultWriter;
+        readonly IFileSearcher _searcher;
+        readonly int _vpus;
 
 
         internal Program(RegionEndpoint region, string vaultName, BackupType backupType, string backupSource, string relativeRoot, string output)
@@ -26,6 +29,22 @@ namespace GlacierBackup
             _backupType = backupType;
             _backupSource = backupSource;
             _relativeRoot = relativeRoot;
+
+            if(_backupType == BackupType.Assets)
+            {
+                _searcher = new AssetFileSearcher();
+            }
+            else
+            {
+                _searcher = new AllFileSearcher();
+            }
+
+            _vpus = Environment.ProcessorCount - 1;
+
+            if(_vpus < 1)
+            {
+                _vpus = 1;
+            }
 
             _resultWriter = new SqlResultWriter(output);
         }
@@ -81,17 +100,10 @@ namespace GlacierBackup
 
         void BackupDirectory(string directory)
         {
-            var files = Directory.GetFiles(directory);
-
-            var vpus = Environment.ProcessorCount - 1;
-
-            if(vpus < 1)
-            {
-                vpus = 1;
-            }
+            var files = _searcher.FindFiles(directory);
 
             // try to leave a couple threads available for the GC
-            var opts = new ParallelOptions { MaxDegreeOfParallelism = vpus };
+            var opts = new ParallelOptions { MaxDegreeOfParallelism = _vpus };
 
             Parallel.ForEach(files, opts, BackupFile);
         }
