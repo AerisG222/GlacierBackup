@@ -2,8 +2,11 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Amazon;
+using Amazon.Runtime;
 using GlacierBackup.FileSearchers;
 using GlacierBackup.Writers;
+
+using GlacierBackup.Temp;
 
 
 namespace GlacierBackup
@@ -12,6 +15,7 @@ namespace GlacierBackup
     {
         static readonly object _lockObj = new object();
 
+        readonly AWSCredentials _credentials;
         readonly RegionEndpoint _region;
         readonly string _vaultName;
         readonly BackupType _backupType;
@@ -22,8 +26,9 @@ namespace GlacierBackup
         readonly int _vpus;
 
 
-        internal Program(RegionEndpoint region, string vaultName, BackupType backupType, string backupSource, string relativeRoot, string output)
+        internal Program(AWSCredentials credentials, RegionEndpoint region, string vaultName, BackupType backupType, string backupSource, string relativeRoot, string output)
         {
+            _credentials = credentials;
             _region = region;
             _vaultName = vaultName;
             _backupType = backupType;
@@ -52,26 +57,64 @@ namespace GlacierBackup
 
         public static void Main(string[] args)
         {
-            if(args.Length != 6)
+            if(args.Length != 7)
             {
                 ShowUsage();
                 Environment.Exit(1);
             }
 
-            var awsRegion = RegionEndpoint.GetBySystemName(args[0]);
-            var vaultName = args[1];
-            var backupType = string.Equals(args[2], "assets", StringComparison.OrdinalIgnoreCase) ? BackupType.Assets : BackupType.Full;
-            var backupSource = args[3];  // individual file / or folder
-            var relativeRoot = args[4];
-            var output = args[5];  // sql file to write
+            var profile = args[0];
+            var awsRegion = RegionEndpoint.GetBySystemName(args[1]);
+            var vaultName = args[2];
+            var backupType = string.Equals(args[3], "assets", StringComparison.OrdinalIgnoreCase) ? BackupType.Assets : BackupType.Full;
+            var backupSource = args[4];  // individual file / or folder
+            var relativeRoot = args[5];
+            var output = args[6];  // sql file to write
+
+            AWSCredentials credentials = null;
+
+            try
+            {
+                credentials = new StoredProfileAWSCredentials(profile, StoredProfileCredentials.DefaultSharedCredentialLocation);
+            }
+            catch (System.Exception)
+            {
+                Console.WriteLine($"Unable to obtain credentials for profile [{profile}].  Please make sure this is properly configured in ~/.aws/credentials.");
+                Environment.Exit(2);
+            }
+
+            if(string.Equals(awsRegion.DisplayName, "Unknown", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine($"The specified region [{awsRegion.SystemName}] was unknown!  Please select a valid region.");
+                Environment.Exit(2);
+            }
+
+            if(!Directory.Exists(backupSource))
+            {
+                Console.WriteLine($"The specified backup source [{backupSource}] does not exist.  Please enter a valid directory path to backup.");
+                Environment.Exit(2);
+            }
+
+            if(relativeRoot.Length > backupSource.Length)
+            {
+                Console.WriteLine("The relative_root path should be the starting part of the path to the backup to remove, such that the remaining path is tracked as the archive description.");
+                Environment.Exit(2);
+            }
+
+            if(!backupSource.StartsWith(relativeRoot))
+            {
+                Console.WriteLine("The relative_root should exactly match the same starting path to the backup_source.");
+                Environment.Exit(2);
+            }
 
             if(File.Exists(output))
             {
                 Console.WriteLine("Output file already exists - exiting!");
-                Environment.Exit(3);
+                Environment.Exit(2);
             }
 
-            var program = new Program(awsRegion, vaultName, backupType, backupSource, relativeRoot, output);
+            var program = new Program(credentials, awsRegion, vaultName, backupType, backupSource, relativeRoot, output);
+
             program.Execute();
         }
 
@@ -112,12 +155,14 @@ namespace GlacierBackup
         void BackupFile(string file)
         {
             var backupFile = new BackupFile(file, _relativeRoot);
-
+            var atm = new ArchiveTransferManager(_credentials, _region);
             var result = new BackupResult {
                 Region = _region,
                 Vault = _vaultName,
                 Backup = backupFile
             };
+            
+            result.Result = atm.Upload(_vaultName, backupFile.GlacierDescription, backupFile.FullPath);
 
             lock(_lockObj)
             {
@@ -130,6 +175,7 @@ namespace GlacierBackup
         {
             Console.WriteLine("GlacierBackup <aws_region> <aws_vault> <backup_type> <backup_source> <relative_root> <output_file>");
             Console.WriteLine("  where:");
+            Console.WriteLine("     aws_profile = name of AWS profile from your credentials file");
             Console.WriteLine("     aws_region = name of AWS region (i.e. us-east-1, us-west-2)");
             Console.WriteLine("     aws_vault = name of the already created vault to store archives in");
             Console.WriteLine("     backup_type = 'assets' to only backup files contained in 'src' directories, ");

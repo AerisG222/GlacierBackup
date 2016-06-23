@@ -1,6 +1,6 @@
 using System;
 using Amazon;
-using Amazon.Glacier.Transfer;
+using GlacierBackup.Temp;
 
 
 namespace GlacierBackup
