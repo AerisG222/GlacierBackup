@@ -2,11 +2,10 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Amazon;
+using Amazon.Glacier.Transfer;
 using Amazon.Runtime;
 using GlacierBackup.FileSearchers;
 using GlacierBackup.Writers;
-
-using GlacierBackup.Temp;
 
 
 namespace GlacierBackup
