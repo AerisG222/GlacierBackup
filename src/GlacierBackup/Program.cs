@@ -161,6 +161,8 @@ namespace GlacierBackup
                 Backup = backupFile
             };
             
+            Console.WriteLine($"  - backing up {backupFile.GlacierDescription}...");
+
             result.Result = atm.Upload(_vaultName, backupFile.GlacierDescription, backupFile.FullPath);
 
             lock(_lockObj)
