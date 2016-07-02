@@ -34,13 +34,23 @@ namespace GlacierBackup
             _backupSource = backupSource;
             _relativeRoot = relativeRoot;
 
-            if(_backupType == BackupType.Assets)
+            switch(_backupType)
             {
-                _searcher = new AssetFileSearcher();
-            }
-            else
-            {
-                _searcher = new AllFileSearcher();
+                case BackupType.Assets:
+                {
+                    _searcher = new AssetFileSearcher();
+                    break;
+                }
+                case BackupType.Full:
+                {
+                    _searcher = new AllFileSearcher();
+                    break;
+                }
+                case BackupType.File:
+                {
+                    _searcher = new SingleFileSearcher();
+                    break;
+                }
             }
 
             _vpus = Environment.ProcessorCount - 1;
@@ -65,7 +75,7 @@ namespace GlacierBackup
             var profile = args[0];
             var awsRegion = RegionEndpoint.GetBySystemName(args[1]);
             var vaultName = args[2];
-            var backupType = string.Equals(args[3], "assets", StringComparison.OrdinalIgnoreCase) ? BackupType.Assets : BackupType.Full;
+            var backupType = args[3];
             var backupSource = args[4];  // individual file / or folder
             var relativeRoot = args[5];
             var output = args[6];  // sql file to write
@@ -88,9 +98,22 @@ namespace GlacierBackup
                 Environment.Exit(2);
             }
 
-            if(!Directory.Exists(backupSource))
+            if(!Enum.IsDefined(typeof(BackupType), backupType))
             {
-                Console.WriteLine($"The specified backup source [{backupSource}] does not exist.  Please enter a valid directory path to backup.");
+                Console.WriteLine($"Please specify a valid backup type [Full, Assets, File].");
+                Environment.Exit(2);
+            }
+
+            var theBackupType = Enum.Parse(typeof(BackupType), backupType);
+
+            if(theBackupType == BackupType.File && !File.Exists(backupSource))
+            {
+                Console.WriteLine($"The specified backup file [{backupSource}] does not exist.  Please enter a valid directory path to backup.");
+                Environment.Exit(2);
+            }
+            else if(theBackupType != BackupType.File && !Directory.Exists(backupSource))
+            {
+                Console.WriteLine($"The specified backup directory [{backupSource}] does not exist.  Please enter a valid directory path to backup.");
                 Environment.Exit(2);
             }
 
@@ -112,7 +135,7 @@ namespace GlacierBackup
                 Environment.Exit(2);
             }
 
-            var program = new Program(credentials, awsRegion, vaultName, backupType, backupSource, relativeRoot, output);
+            var program = new Program(credentials, awsRegion, vaultName, theBackupType, backupSource, relativeRoot, output);
 
             program.Execute();
         }
@@ -176,14 +199,16 @@ namespace GlacierBackup
         {
             Console.WriteLine("GlacierBackup <aws_region> <aws_vault> <backup_type> <backup_source> <relative_root> <output_file>");
             Console.WriteLine("  where:");
-            Console.WriteLine("     aws_profile = name of AWS profile from your credentials file");
-            Console.WriteLine("     aws_region = name of AWS region (i.e. us-east-1, us-west-2)");
-            Console.WriteLine("     aws_vault = name of the already created vault to store archives in");
-            Console.WriteLine("     backup_type = 'assets' to only backup files contained in 'src' directories, ");
-            Console.WriteLine("                   otherwise all files will be backed up");
-            Console.WriteLine("     backup_source = file or directory containing files to backup");
-            Console.WriteLine("     relative_root = starting part of path to remove when building Glacier description");
-            Console.WriteLine("     output_file = path where the sql should be written that maps archive details to the asset");
+            Console.WriteLine("    aws_profile = name of AWS profile from your credentials file");
+            Console.WriteLine("    aws_region = name of AWS region (i.e. us-east-1, us-west-2)");
+            Console.WriteLine("    aws_vault = name of the already created vault to store archives in");
+            Console.WriteLine("    backup_type = one of the following:");
+            Console.WriteLine("        assets: backup all files contained in 'src' directories ");
+            Console.WriteLine("        full: backup all files in the specified directory or below");
+            Console.WriteLine("        file: backup an individual file");
+            Console.WriteLine("    backup_source = file or directory containing files to backup");
+            Console.WriteLine("    relative_root = starting part of path to remove when building Glacier description");
+            Console.WriteLine("    output_file = path where the sql should be written that maps archive details to the asset");
             Console.WriteLine();
         }
     }

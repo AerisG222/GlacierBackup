@@ -6,6 +6,7 @@ namespace GlacierBackup
     public enum BackupType
     {
         Full,
-        Assets
+        Assets,
+        File
     }
 }
