@@ -14,59 +14,24 @@ namespace GlacierBackup
     {
         static readonly object _lockObj = new object();
 
-        readonly AWSCredentials _credentials;
-        readonly RegionEndpoint _region;
-        readonly string _vaultName;
-        readonly BackupType _backupType;
-        readonly string _backupSource;
-        readonly string _relativeRoot;
+        readonly Options _opts;
         readonly IResultWriter _resultWriter;
         readonly IFileSearcher _searcher;
         readonly int _vpus;
 
 
-        internal Program(AWSCredentials credentials, RegionEndpoint region, string vaultName, BackupType backupType, string backupSource, string relativeRoot, string output)
+        internal Program(Options opts)
         {
-            _credentials = credentials;
-            _region = region;
-            _vaultName = vaultName;
-            _backupType = backupType;
-            _backupSource = backupSource;
-            _relativeRoot = relativeRoot;
-
-            switch(_backupType)
-            {
-                case BackupType.Assets:
-                {
-                    _searcher = new AssetFileSearcher();
-                    break;
-                }
-                case BackupType.Full:
-                {
-                    _searcher = new AllFileSearcher();
-                    break;
-                }
-                case BackupType.File:
-                {
-                    _searcher = new SingleFileSearcher();
-                    break;
-                }
-            }
-
-            _vpus = Environment.ProcessorCount - 1;
-
-            if(_vpus < 1)
-            {
-                _vpus = 1;
-            }
-
-            _resultWriter = new SqlResultWriter(output);
+            _opts = opts;
+            _searcher = GetFileSearcher();
+            _resultWriter = GetResultWriter();
+            _vpus = GetVpus();
         }
 
 
         public static void Main(string[] args)
         {
-            if(args.Length != 7)
+            if(args.Length != 8)
             {
                 ShowUsage();
                 Environment.Exit(1);
@@ -78,7 +43,8 @@ namespace GlacierBackup
             var backupType = args[3];
             var backupSource = args[4];  // individual file / or folder
             var relativeRoot = args[5];
-            var output = args[6];  // sql file to write
+            var outputType = args[6];
+            var output = args[7];  // sql file to write
 
             AWSCredentials credentials = null;
 
@@ -129,13 +95,30 @@ namespace GlacierBackup
                 Environment.Exit(2);
             }
 
+            OutputType theOutputType;
+
+            if(!Enum.TryParse<OutputType>(outputType, true, out theOutputType))
+            {
+                Console.WriteLine($"Please specify a valid output type [PhotoSql, VideoSql, Csv].");
+                Environment.Exit(2);
+            }
+
             if(File.Exists(output))
             {
                 Console.WriteLine("Output file already exists - exiting!");
                 Environment.Exit(2);
             }
 
-            var program = new Program(credentials, awsRegion, vaultName, theBackupType, backupSource, relativeRoot, output);
+            var program = new Program(new Options {
+                Credentials = credentials, 
+                Region = awsRegion, 
+                VaultName = vaultName, 
+                BackupType = theBackupType, 
+                BackupSource = backupSource, 
+                RelativeRoot = relativeRoot, 
+                OutputType = theOutputType,
+                Output = output
+            });
 
             program.Execute();
         }
@@ -145,13 +128,13 @@ namespace GlacierBackup
         {
             _resultWriter.Initialize();
 
-            if(File.Exists(_backupSource))
+            if(File.Exists(_opts.BackupSource))
             {
-                BackupFile(_backupSource);
+                BackupFile(_opts.BackupSource);
             }
-            else if(Directory.Exists(_backupSource))
+            else if(Directory.Exists(_opts.BackupSource))
             {
-                BackupDirectory(_backupSource);
+                BackupDirectory(_opts.BackupSource);
             }
             else
             {
@@ -176,17 +159,17 @@ namespace GlacierBackup
 
         void BackupFile(string file)
         {
-            var backupFile = new BackupFile(file, _relativeRoot);
-            var atm = new ArchiveTransferManager(_credentials, _region);
+            var backupFile = new BackupFile(file, _opts.RelativeRoot);
+            var atm = new ArchiveTransferManager(_opts.Credentials, _opts.Region);
             var result = new BackupResult {
-                Region = _region,
-                Vault = _vaultName,
+                Region = _opts.Region,
+                Vault = _opts.VaultName,
                 Backup = backupFile
             };
             
             Console.WriteLine($"  - backing up {backupFile.GlacierDescription}...");
 
-            result.Result = atm.Upload(_vaultName, backupFile.GlacierDescription, backupFile.FullPath);
+            result.Result = atm.Upload(_opts.VaultName, backupFile.GlacierDescription, backupFile.FullPath);
 
             lock(_lockObj)
             {
@@ -195,9 +178,53 @@ namespace GlacierBackup
         }
 
 
+        IFileSearcher GetFileSearcher()
+        {
+            switch(_opts.BackupType)
+            {
+                case BackupType.Assets:
+                {
+                    return new AssetFileSearcher();
+                }
+                case BackupType.Full:
+                {
+                    return new AllFileSearcher();
+                }
+                case BackupType.File:
+                {
+                    return new SingleFileSearcher();
+                }
+            }
+
+            throw new InvalidOperationException("This backup type is not properly supported");
+        }
+
+
+        IResultWriter GetResultWriter()
+        {
+            switch(_opts.OutputType)
+            {
+                case OutputType.PhotoSql:
+                    return new PhotosPgSqlResultWriter(_opts.Output);
+                case OutputType.VideoSql:
+                    return new VideosPgSqlResultWriter(_opts.Output);
+                case OutputType.Csv:
+                    return new CsvResultWriter(_opts.Output);
+            }
+
+            throw new InvalidOperationException("This output type is not properly supported");
+        }
+
+
+        int GetVpus()
+        {
+            return Math.Max(1, Environment.ProcessorCount - 1);
+        }
+
+
         static void ShowUsage()
         {
-            Console.WriteLine("GlacierBackup <aws_region> <aws_vault> <backup_type> <backup_source> <relative_root> <output_file>");
+            Console.WriteLine("GlacierBackup <aws_profile> <aws_region> <aws_vault> <backup_type> <backup_source> <relative_root> <output_type> <output_file>");
             Console.WriteLine("  where:");
             Console.WriteLine("    aws_profile = name of AWS profile from your credentials file");
             Console.WriteLine("    aws_region = name of AWS region (i.e. us-east-1, us-west-2)");
@@ -208,6 +235,10 @@ namespace GlacierBackup
             Console.WriteLine("        file: backup an individual file");
             Console.WriteLine("    backup_source = file or directory containing files to backup");
             Console.WriteLine("    relative_root = starting part of path to remove when building Glacier description");
+            Console.WriteLine("    output_type = type of file to generate: [PhotoSql, VideoSql, Csv]");
+            Console.WriteLine("        photosql: sql update script for photos");
+            Console.WriteLine("        videosql: sql update script for videos");
+            Console.WriteLine("        csv: generic CSV file");
             Console.WriteLine("    output_file = path where the sql should be written that maps archive details to the asset");
             Console.WriteLine();
         }
