@@ -98,14 +98,14 @@ namespace GlacierBackup
                 Environment.Exit(2);
             }
 
-            if(!Enum.IsDefined(typeof(BackupType), backupType))
+            BackupType theBackupType;
+
+            if(!Enum.TryParse<BackupType>(backupType, true, out theBackupType))
             {
                 Console.WriteLine($"Please specify a valid backup type [Full, Assets, File].");
                 Environment.Exit(2);
             }
-
-            var theBackupType = (BackupType)Enum.Parse(typeof(BackupType), backupType);
-
+            
             if(theBackupType == BackupType.File && !File.Exists(backupSource))
             {
                 Console.WriteLine($"The specified backup file [{backupSource}] does not exist.  Please enter a valid directory path to backup.");
