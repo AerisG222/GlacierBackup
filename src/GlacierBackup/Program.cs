@@ -104,7 +104,7 @@ namespace GlacierBackup
                 Environment.Exit(2);
             }
 
-            var theBackupType = Enum.Parse(typeof(BackupType), backupType);
+            var theBackupType = (BackupType)Enum.Parse(typeof(BackupType), backupType);
 
             if(theBackupType == BackupType.File && !File.Exists(backupSource))
             {
