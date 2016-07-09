@@ -7,6 +7,7 @@ namespace GlacierBackup
     {
         Full,
         Assets,
-        File
+        File,
+        List
     }
 }

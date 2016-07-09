@@ -77,19 +77,24 @@ namespace GlacierBackup
                 Console.WriteLine($"The specified backup file [{backupSource}] does not exist.  Please enter a valid directory path to backup.");
                 Environment.Exit(2);
             }
-            else if(theBackupType != BackupType.File && !Directory.Exists(backupSource))
+            else if((theBackupType == BackupType.Assets || theBackupType == BackupType.Full) && !Directory.Exists(backupSource))
             {
                 Console.WriteLine($"The specified backup directory [{backupSource}] does not exist.  Please enter a valid directory path to backup.");
                 Environment.Exit(2);
             }
+            else if(theBackupType == BackupType.List && !File.Exists(backupSource))
+            {
+                Console.WriteLine($"The specified file containing the list of files to backup [{backupSource}] does not exist.  Please enter a valid path to the list file.");
+                Environment.Exit(2);
+            }
 
-            if(relativeRoot.Length > backupSource.Length)
+            if(theBackupType != BackupType.List && relativeRoot.Length > backupSource.Length)
             {
                 Console.WriteLine("The relative_root path should be the starting part of the path to the backup to remove, such that the remaining path is tracked as the archive description.");
                 Environment.Exit(2);
             }
 
-            if(!backupSource.StartsWith(relativeRoot))
+            if(theBackupType != BackupType.List && !backupSource.StartsWith(relativeRoot))
             {
                 Console.WriteLine("The relative_root should exactly match the same starting path to the backup_source.");
                 Environment.Exit(2);
@@ -128,27 +133,15 @@ namespace GlacierBackup
         {
             _resultWriter.Initialize();
 
-            if(File.Exists(_opts.BackupSource))
-            {
-                BackupFile(_opts.BackupSource);
-            }
-            else if(Directory.Exists(_opts.BackupSource))
-            {
-                BackupDirectory(_opts.BackupSource);
-            }
-            else
-            {
-                Console.WriteLine("Did not find a valid file or directory to backup!");
-                Environment.Exit(2);
-            }
+            BackupFiles();
 
             _resultWriter.Complete();
         }
 
 
-        void BackupDirectory(string directory)
+        void BackupFiles()
         {
-            var files = _searcher.FindFiles(directory);
+            var files = _searcher.FindFiles(_opts.BackupSource);
 
             // try to leave a couple threads available for the GC
             var opts = new ParallelOptions { MaxDegreeOfParallelism = _vpus };
@@ -194,6 +187,10 @@ namespace GlacierBackup
                 {
                     return new SingleFileSearcher();
                 }
+                case BackupType.List:
+                {
+                    return new ListFileSearcher();
+                }
             }
 
             throw new InvalidOperationException("This backup type is not properly supported");
@@ -233,6 +230,7 @@ namespace GlacierBackup
             Console.WriteLine("        assets: backup all files contained in 'src' directories ");
             Console.WriteLine("        full: backup all files in the specified directory or below");
             Console.WriteLine("        file: backup an individual file");
+            Console.WriteLine("        list: backup all files contained in the specified file (1 per line)");
             Console.WriteLine("    backup_source = file or directory containing files to backup");
             Console.WriteLine("    relative_root = starting part of path to remove when building Glacier description");
             Console.WriteLine("    output_type = type of file to generate: [PhotoSql, VideoSql, Csv]");
