@@ -52,5 +52,5 @@ install:
   - dotnet restore
 script:
   # Run tests
-  - cd src/GlacierBackup
-  - dotnet build -c $CONFIGURATION -f $FRAMEWORK
+  # cd src/GlacierBackup
+  # dotnet build -c $CONFIGURATION -f $FRAMEWORK
