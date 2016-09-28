@@ -1,6 +1,6 @@
 [![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/AerisG222/GlacierBackup/blob/master/LICENSE.md)
 
-#GlacierBackup
+# GlacierBackup
 
 This is a small utility to backup different assets to Amazon Glacier.  This will initially
 be used to help backup assets for my website, but should be more generally applicable for other
