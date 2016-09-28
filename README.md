@@ -1,4 +1,6 @@
-[![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/AerisG222/GlacierBackup/blob/master/LICENSE.md)
+[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/AerisG222/GlacierBackup/blob/master/LICENSE.md)
+[![Travis](https://img.shields.io/travis/AerisG222/GlacierBackup.svg)](https://travis-ci.org/AerisG222/GlacierBackup)
+[![Coverity Scan](https://img.shields.io/coverity/scan/10076.svg)](https://scan.coverity.com/projects/aerisg222-glacierbackup)
 
 # GlacierBackup
 
