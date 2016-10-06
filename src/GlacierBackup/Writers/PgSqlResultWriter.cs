@@ -30,7 +30,7 @@ namespace GlacierBackup.Writers
             _writer.WriteLine("$$");
             
             _writer.Flush();
-            _writer.Close();
+            _writer.Dispose();
             _writer = null;
         }
 

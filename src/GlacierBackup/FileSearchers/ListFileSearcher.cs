@@ -10,7 +10,7 @@ namespace GlacierBackup.FileSearchers
     {
         public IEnumerable<string> FindFiles(string sourceFile)
         {
-            using(var sr = new StreamReader(sourceFile))
+            using(var sr = new StreamReader(new FileStream(sourceFile, FileMode.Open)))
             {
                 while(sr.Peek() > 0)
                 {
