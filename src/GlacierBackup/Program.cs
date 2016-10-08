@@ -18,6 +18,7 @@ namespace GlacierBackup
         readonly IResultWriter _resultWriter;
         readonly IFileSearcher _searcher;
         readonly int _vpus;
+        readonly ArchiveTransferManager _atm;
 
 
         internal Program(Options opts)
@@ -26,6 +27,7 @@ namespace GlacierBackup
             _searcher = GetFileSearcher();
             _resultWriter = GetResultWriter();
             _vpus = GetVpus();
+            _atm = new ArchiveTransferManager(_opts.Credentials, _opts.Region);
         }
 
 
@@ -153,7 +155,7 @@ namespace GlacierBackup
         void BackupFile(string file)
         {
             var backupFile = new BackupFile(file, _opts.RelativeRoot);
-            var atm = new ArchiveTransferManager(_opts.Credentials, _opts.Region);
+            
             var result = new BackupResult {
                 Region = _opts.Region,
                 Vault = _opts.VaultName,
@@ -162,7 +164,7 @@ namespace GlacierBackup
             
             Console.WriteLine($"  - backing up {backupFile.GlacierDescription}...");
 
-            result.Result = atm.UploadAsync(_opts.VaultName, backupFile.GlacierDescription, backupFile.FullPath).Result;
+            result.Result = _atm.UploadAsync(_opts.VaultName, backupFile.GlacierDescription, backupFile.FullPath).Result;
 
             lock(_lockObj)
             {
