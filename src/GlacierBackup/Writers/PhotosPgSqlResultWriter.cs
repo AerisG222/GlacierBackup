@@ -1,8 +1,3 @@
-using System;
-using System.IO;
-using GlacierBackup;
-
-
 namespace GlacierBackup.Writers
 {
     public class PhotosPgSqlResultWriter

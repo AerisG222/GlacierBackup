@@ -1,6 +1,3 @@
-using System;
-
-
 namespace GlacierBackup
 {
     public enum BackupType

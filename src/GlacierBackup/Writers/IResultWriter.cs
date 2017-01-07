@@ -1,7 +1,3 @@
-using System;
-using GlacierBackup;
-
-
 namespace GlacierBackup.Writers
 {
     public interface IResultWriter
