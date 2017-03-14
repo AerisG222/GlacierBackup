@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.Glacier.Transfer;
@@ -12,7 +13,11 @@ namespace GlacierBackup
 {
     public class Program
     {
+        const int RETRY_COUNT = 3;
+        const int START_WAIT_TIME_MS = 5000;
+
         static readonly object _lockObj = new object();
+        static readonly Random _rand = new Random();
 
         readonly Options _opts;
         readonly IResultWriter _resultWriter;
@@ -162,14 +167,32 @@ namespace GlacierBackup
                 Backup = backupFile
             };
             
-            Console.WriteLine($"  - backing up {backupFile.GlacierDescription}...");
-
-            result.Result = _atm.UploadAsync(_opts.VaultName, backupFile.GlacierDescription, backupFile.FullPath).Result;
-
-            lock(_lockObj)
+            for(var i = 1; i <= RETRY_COUNT; i++)
             {
-                _resultWriter.WriteResult(result);
+                try
+                {
+                    Console.WriteLine($"  - backing up {backupFile.GlacierDescription}, attempt {i}...");
+
+                    result.Result = _atm.UploadAsync(_opts.VaultName, backupFile.GlacierDescription, backupFile.FullPath).Result;
+
+                    lock(_lockObj)
+                    {
+                        _resultWriter.WriteResult(result);
+                    }
+
+                    return;
+                }
+                catch(Exception ex)
+                {
+                    Console.WriteLine($"  - error backing up {backupFile.GlacierDescription}, attempt {i}: {ex.Message}");
+
+                    var ms = _rand.Next(START_WAIT_TIME_MS) * i;  // wait for a random amount of time, and increase as the number of tries increases
+
+                    Thread.Sleep(ms);
+                }
             }
+
+            Console.WriteLine($" ** unable to backup {backupFile.GlacierDescription} **");
         }
 
 
