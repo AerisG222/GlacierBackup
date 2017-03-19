@@ -169,9 +169,11 @@ namespace GlacierBackup
             
             for(var i = 1; i <= RETRY_COUNT; i++)
             {
+                var attempt = i > 1 ? $" (attempt {i})" : string.Empty;
+
                 try
                 {
-                    Console.WriteLine($"  - backing up {backupFile.GlacierDescription}, attempt {i}...");
+                    Console.WriteLine($"  - backing up {backupFile.GlacierDescription}{attempt}");
 
                     result.Result = _atm.UploadAsync(_opts.VaultName, backupFile.GlacierDescription, backupFile.FullPath).Result;
 
@@ -184,7 +186,7 @@ namespace GlacierBackup
                 }
                 catch(Exception ex)
                 {
-                    Console.WriteLine($"  - error backing up {backupFile.GlacierDescription}, attempt {i}: {ex.Message}");
+                    Console.WriteLine($"  - error backing up {backupFile.GlacierDescription}{attempt}: {ex.Message}");
 
                     var ms = _rand.Next(START_WAIT_TIME_MS) * i;  // wait for a random amount of time, and increase as the number of tries increases
 
