@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Amazon;
 using Amazon.Glacier.Transfer;
 using Amazon.Runtime;
+using Amazon.Runtime.CredentialManagement;
 using GlacierBackup.FileSearchers;
 using GlacierBackup.Writers;
 
@@ -54,10 +55,18 @@ namespace GlacierBackup
             var output = args[7];  // sql file to write
 
             AWSCredentials credentials = null;
-
+            var sharedFile = new SharedCredentialsFile();
+            
             try
             {
-                credentials = new StoredProfileAWSCredentials(profile, StoredProfileCredentials.DefaultSharedCredentialLocation);
+                if (sharedFile.TryGetProfile(profile, out CredentialProfile theProfile))
+                {
+                    credentials = AWSCredentialsFactory.GetAWSCredentials(theProfile, sharedFile);
+                }
+                else
+                {
+                    throw new ApplicationException("Unable to access profile.");
+                }
             }
             catch (System.Exception)
             {
