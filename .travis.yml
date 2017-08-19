@@ -6,13 +6,13 @@ matrix:
       dist: trusty
       sudo: required
       mono: none
-      dotnet: 1.0.1
+      dotnet: 2.0.0
       env: CONFIGURATION=Debug DOTNETCORE=1
     - os: linux
       dist: trusty
       sudo: required
       mono: none
-      dotnet: 1.0.1
+      dotnet: 2.0.0
       env: CONFIGURATION=Release DOTNETCORE=1
 
 script:
