@@ -1,23 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <Description>Tool to backup assets to Amazon Glacier</Description>
-    <AssemblyTitle>GlacierBackup</AssemblyTitle>
-    <VersionPrefix>0.1.0</VersionPrefix>
-    <Authors>Mike Morano &lt;mmorano@mikeandwan.us&gt;</Authors>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <DebugType>portable</DebugType>
-    <AssemblyName>GlacierBackup</AssemblyName>
-    <OutputType>Exe</OutputType>
-    <PackageId>GlacierBackup</PackageId>
-    <PackageProjectUrl>https://github.com/AerisG222/GlacierBackup</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/AerisG222/GlacierBackup/blob/master/LICENSE.md</PackageLicenseUrl>
-  </PropertyGroup>
+    <PropertyGroup>
+        <Description>Tool to backup assets to Amazon Glacier</Description>
+        <AssemblyTitle>GlacierBackup</AssemblyTitle>
+        <VersionPrefix>0.2.0</VersionPrefix>
+        <Authors>Mike Morano &lt;mmorano@mikeandwan.us&gt;</Authors>
+        <TargetFramework>netcoreapp2.2</TargetFramework>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <DebugType>portable</DebugType>
+        <AssemblyName>GlacierBackup</AssemblyName>
+        <OutputType>Exe</OutputType>
+        <PackageId>GlacierBackup</PackageId>
+        <PackageProjectUrl>https://github.com/AerisG222/GlacierBackup</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/AerisG222/GlacierBackup/blob/master/LICENSE.md</PackageLicenseUrl>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="AWSSDK.Glacier" Version="3.3.2.20" />
-    <PackageReference Include="CsvHelper" Version="7.1.1" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="AWSSDK.Glacier" Version="3.3.2.43" />
+        <PackageReference Include="CsvHelper" Version="12.1.0" />
+    </ItemGroup>
 
 </Project>
