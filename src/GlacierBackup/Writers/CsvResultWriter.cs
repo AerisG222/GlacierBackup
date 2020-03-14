@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using CsvHelper;
 
@@ -21,7 +22,7 @@ namespace GlacierBackup.Writers
         public void Initialize()
         {
             _writer = new StreamWriter(new FileStream(_outputPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 8192, FileOptions.None));
-            _csv = new CsvWriter(_writer);
+            _csv = new CsvWriter(_writer, CultureInfo.CurrentCulture);
 
             _csv.WriteField("region");
             _csv.WriteField("vault_name");
@@ -32,7 +33,7 @@ namespace GlacierBackup.Writers
 
             _csv.NextRecord();
         }
-        
+
 
         public void WriteResult(BackupResult result)
         {
@@ -53,11 +54,11 @@ namespace GlacierBackup.Writers
             {
                 _csv.Dispose();
             }
-            
+
             if(_writer != null)
             {
                 _writer.Dispose();
             }
         }
-    } 
+    }
 }
