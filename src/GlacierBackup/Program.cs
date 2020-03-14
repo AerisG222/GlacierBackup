@@ -56,7 +56,7 @@ namespace GlacierBackup
 
             AWSCredentials credentials = null;
             var sharedFile = new SharedCredentialsFile();
-            
+
             try
             {
                 if (sharedFile.TryGetProfile(profile, out CredentialProfile theProfile))
@@ -87,7 +87,7 @@ namespace GlacierBackup
                 Console.WriteLine($"Please specify a valid backup type [Full, Assets, File].");
                 Environment.Exit(2);
             }
-            
+
             if(theBackupType == BackupType.File && !File.Exists(backupSource))
             {
                 Console.WriteLine($"The specified backup file [{backupSource}] does not exist.  Please enter a valid directory path to backup.");
@@ -131,12 +131,12 @@ namespace GlacierBackup
             }
 
             var program = new Program(new Options {
-                Credentials = credentials, 
-                Region = awsRegion, 
-                VaultName = vaultName, 
-                BackupType = theBackupType, 
-                BackupSource = backupSource, 
-                RelativeRoot = relativeRoot, 
+                Credentials = credentials,
+                Region = awsRegion,
+                VaultName = vaultName,
+                BackupType = theBackupType,
+                BackupSource = backupSource,
+                RelativeRoot = relativeRoot,
                 OutputType = theOutputType,
                 Output = output
             });
@@ -169,13 +169,13 @@ namespace GlacierBackup
         void BackupFile(string file)
         {
             var backupFile = new BackupFile(file, _opts.RelativeRoot);
-            
+
             var result = new BackupResult {
                 Region = _opts.Region,
                 Vault = _opts.VaultName,
                 Backup = backupFile
             };
-            
+
             for(var i = 1; i <= RETRY_COUNT; i++)
             {
                 var attempt = i > 1 ? $" (attempt {i})" : string.Empty;
@@ -213,7 +213,16 @@ namespace GlacierBackup
             {
                 case BackupType.Assets:
                 {
-                    return new AssetFileSearcher();
+                    if(string.Equals(_opts.VaultName, "photos", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return new PhotoAssetFileSearcher();
+                    }
+                    if(string.Equals(_opts.VaultName, "videos", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return new VideoAssetFileSearcher();
+                    }
+
+                    throw new ApplicationException($"Unknown Asset Type for vault { _opts.VaultName }");
                 }
                 case BackupType.Full:
                 {
