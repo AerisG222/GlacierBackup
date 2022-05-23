@@ -39,7 +39,7 @@ namespace GlacierBackup
 
         public static void Main(string[] args)
         {
-            if(args.Length != 8)
+            if(args.Length != 8 && args.Length != 9)
             {
                 ShowUsage();
                 Environment.Exit(1);
@@ -53,9 +53,12 @@ namespace GlacierBackup
             var relativeRoot = args[5];
             var outputType = args[6];
             var output = args[7];  // sql file to write
+            var credentialFile = args.Length == 9 ? args[8] : null;
 
             AWSCredentials credentials = null;
-            var sharedFile = new SharedCredentialsFile();
+            var sharedFile = credentialFile == null ?
+                new SharedCredentialsFile() :
+                new SharedCredentialsFile(credentialFile);
 
             try
             {
@@ -68,7 +71,7 @@ namespace GlacierBackup
                     throw new ApplicationException("Unable to access profile.");
                 }
             }
-            catch (System.Exception)
+            catch (Exception)
             {
                 Console.WriteLine($"Unable to obtain credentials for profile [{profile}].  Please make sure this is properly configured in ~/.aws/credentials.");
                 Environment.Exit(2);
@@ -266,7 +269,7 @@ namespace GlacierBackup
 
         static void ShowUsage()
         {
-            Console.WriteLine("GlacierBackup <aws_profile> <aws_region> <aws_vault> <backup_type> <backup_source> <relative_root> <output_type> <output_file>");
+            Console.WriteLine("GlacierBackup <aws_profile> <aws_region> <aws_vault> <backup_type> <backup_source> <relative_root> <output_type> <output_file> [creds_file]");
             Console.WriteLine("  where:");
             Console.WriteLine("    aws_profile = name of AWS profile from your credentials file");
             Console.WriteLine("    aws_region = name of AWS region (i.e. us-east-1, us-west-2)");
@@ -283,6 +286,7 @@ namespace GlacierBackup
             Console.WriteLine("        videosql: sql update script for videos");
             Console.WriteLine("        csv: generic CSV file");
             Console.WriteLine("    output_file = path where the sql should be written that maps archive details to the asset");
+            Console.WriteLine("    creds_file = path to the shared credentials file to use when connecting to AWS");
             Console.WriteLine();
         }
     }
