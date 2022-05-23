@@ -1,7 +1,6 @@
 using Amazon;
 using Amazon.Glacier.Transfer;
 
-
 namespace GlacierBackup;
 
 public class BackupResult

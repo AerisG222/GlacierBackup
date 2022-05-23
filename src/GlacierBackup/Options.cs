@@ -1,7 +1,6 @@
 using Amazon;
 using Amazon.Runtime;
 
-
 namespace GlacierBackup;
 
 public class Options
