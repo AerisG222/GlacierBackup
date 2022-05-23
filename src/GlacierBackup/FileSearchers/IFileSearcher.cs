@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 
-
 namespace GlacierBackup.FileSearchers;
 
 public interface IFileSearcher

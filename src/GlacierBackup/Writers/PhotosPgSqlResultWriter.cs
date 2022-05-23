@@ -8,7 +8,6 @@ public class PhotosPgSqlResultWriter
         _outputPath = outputPath;
     }
 
-
     public override void WriteResult(BackupResult result)
     {
         _writer.WriteLine($"    UPDATE photo.photo ");
@@ -18,4 +17,4 @@ public class PhotosPgSqlResultWriter
         _writer.WriteLine($"     WHERE src_path = '/images/{result.Backup.GlacierDescription}';");
         _writer.WriteLine();
     }
-} 
+}

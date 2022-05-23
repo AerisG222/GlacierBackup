@@ -5,7 +5,6 @@ public class BackupFile
     public string FullPath { get; private set; }
     public string RelativeRoot { get; private set; }
 
-
     public string GlacierDescription
     {
         get
@@ -13,7 +12,6 @@ public class BackupFile
             return FullPath.Replace(RelativeRoot, string.Empty);
         }
     }
-
 
     public BackupFile(string fullPath, string relativeRoot)
     {

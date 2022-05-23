@@ -2,14 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-
 namespace GlacierBackup.FileSearchers;
 
 public abstract class AssetFileSearcher
     : IFileSearcher
 {
     readonly string _srcDir;
-
 
     public AssetFileSearcher(string srcDir)
     {
@@ -20,7 +18,6 @@ public abstract class AssetFileSearcher
 
         _srcDir = srcDir;
     }
-
 
     public IEnumerable<string> FindFiles(string rootDirectory)
     {

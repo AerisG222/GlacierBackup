@@ -1,6 +1,5 @@
 using System.IO;
 
-
 namespace GlacierBackup.Writers;
 
 public abstract class PgSqlResultWriter
@@ -8,7 +7,6 @@ public abstract class PgSqlResultWriter
 {
     protected string _outputPath;
     protected StreamWriter _writer;
-
 
     public virtual void Initialize()
     {
@@ -19,7 +17,6 @@ public abstract class PgSqlResultWriter
         _writer.WriteLine("BEGIN");
         _writer.WriteLine();
     }
-
 
     public virtual void Complete()
     {
@@ -32,6 +29,5 @@ public abstract class PgSqlResultWriter
         _writer = null;
     }
 
-
     public abstract void WriteResult(BackupResult result);
-} 
+}

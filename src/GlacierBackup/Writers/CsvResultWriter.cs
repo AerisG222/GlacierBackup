@@ -2,7 +2,6 @@ using System.Globalization;
 using System.IO;
 using CsvHelper;
 
-
 namespace GlacierBackup.Writers;
 
 public class CsvResultWriter
@@ -12,12 +11,10 @@ public class CsvResultWriter
     StreamWriter _writer;
     CsvWriter _csv;
 
-
     public CsvResultWriter(string outputPath)
     {
         _outputPath = outputPath;
     }
-
 
     public void Initialize()
     {
@@ -34,7 +31,6 @@ public class CsvResultWriter
         _csv.NextRecord();
     }
 
-
     public void WriteResult(BackupResult result)
     {
         _csv.WriteField(result.Region.SystemName);
@@ -46,7 +42,6 @@ public class CsvResultWriter
 
         _csv.NextRecord();
     }
-
 
     public void Complete()
     {

@@ -9,7 +9,6 @@ using Amazon.Runtime.CredentialManagement;
 using GlacierBackup.FileSearchers;
 using GlacierBackup.Writers;
 
-
 namespace GlacierBackup;
 
 public class Program
@@ -26,7 +25,6 @@ public class Program
     readonly int _vpus;
     readonly ArchiveTransferManager _atm;
 
-
     internal Program(Options opts)
     {
         _opts = opts;
@@ -35,7 +33,6 @@ public class Program
         _vpus = GetVpus();
         _atm = new ArchiveTransferManager(_opts.Credentials, _opts.Region);
     }
-
 
     public static void Main(string[] args)
     {
@@ -148,7 +145,6 @@ public class Program
         program.Execute();
     }
 
-
     void Execute()
     {
         _resultWriter.Initialize();
@@ -157,7 +153,6 @@ public class Program
 
         _resultWriter.Complete();
     }
-
 
     void BackupFiles()
     {
@@ -168,7 +163,6 @@ public class Program
 
         Parallel.ForEach(files, opts, BackupFile);
     }
-
 
     void BackupFile(string file)
     {
@@ -211,7 +205,6 @@ public class Program
         Console.WriteLine($" ** unable to backup {backupFile.GlacierDescription} **");
     }
 
-
     IFileSearcher GetFileSearcher()
     {
         switch (_opts.BackupType)
@@ -246,7 +239,6 @@ public class Program
         throw new InvalidOperationException("This backup type is not properly supported");
     }
 
-
     IResultWriter GetResultWriter()
     {
         switch (_opts.OutputType)
@@ -262,12 +254,10 @@ public class Program
         throw new InvalidOperationException("This output type is not properly supported");
     }
 
-
     int GetVpus()
     {
         return Math.Max(1, Environment.ProcessorCount - 1);
     }
-
 
     static void ShowUsage()
     {

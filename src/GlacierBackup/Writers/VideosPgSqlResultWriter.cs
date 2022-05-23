@@ -8,7 +8,6 @@ public class VideosPgSqlResultWriter
         _outputPath = outputPath;
     }
 
-
     public override void WriteResult(BackupResult result)
     {
         _writer.WriteLine($"    UPDATE video.video ");
