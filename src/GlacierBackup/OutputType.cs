@@ -1,9 +1,8 @@
-namespace GlacierBackup
+namespace GlacierBackup;
+
+public enum OutputType
 {
-    public enum OutputType
-    {
-        PhotoSql,
-        VideoSql,
-        Csv
-    }
+    PhotoSql,
+    VideoSql,
+    Csv
 }

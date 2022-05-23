@@ -1,14 +1,13 @@
 using System.Collections.Generic;
 
 
-namespace GlacierBackup.FileSearchers
+namespace GlacierBackup.FileSearchers;
+
+public class SingleFileSearcher
+    : IFileSearcher
 {
-    public class SingleFileSearcher
-        : IFileSearcher
+    public IEnumerable<string> FindFiles(string file)
     {
-        public IEnumerable<string> FindFiles(string file)
-        {
-            yield return file;
-        }
+        yield return file;
     }
 }

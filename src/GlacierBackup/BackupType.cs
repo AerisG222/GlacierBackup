@@ -1,10 +1,9 @@
-namespace GlacierBackup
+namespace GlacierBackup;
+
+public enum BackupType
 {
-    public enum BackupType
-    {
-        Full,
-        Assets,
-        File,
-        List
-    }
+    Full,
+    Assets,
+    File,
+    List
 }

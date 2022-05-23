@@ -1,9 +1,8 @@
-namespace GlacierBackup.Writers
+namespace GlacierBackup.Writers;
+
+public interface IResultWriter
 {
-    public interface IResultWriter
-    {
-        void Initialize();
-        void WriteResult(BackupResult result);
-        void Complete();
-    } 
-}
+    void Initialize();
+    void WriteResult(BackupResult result);
+    void Complete();
+} 

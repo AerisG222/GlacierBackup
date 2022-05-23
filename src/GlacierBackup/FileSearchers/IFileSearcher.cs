@@ -1,10 +1,9 @@
 using System.Collections.Generic;
 
 
-namespace GlacierBackup.FileSearchers
+namespace GlacierBackup.FileSearchers;
+
+public interface IFileSearcher
 {
-    public interface IFileSearcher
-    {
-        IEnumerable<string> FindFiles(string rootDirectory);
-    }
+    IEnumerable<string> FindFiles(string rootDirectory);
 }
