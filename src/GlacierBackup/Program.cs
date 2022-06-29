@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon;
@@ -141,6 +142,8 @@ public class Program
             OutputType = theOutputType,
             Output = output
         });
+
+        ServicePointManager.DefaultConnectionLimit = 50;
 
         program.Execute();
     }
