@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 using System.Threading;
@@ -17,14 +18,12 @@ public class Program
     const int RETRY_COUNT = 3;
     const int START_WAIT_TIME_MS = 5000;
 
-    static readonly object _lockObj = new object();
-    static readonly Random _rand = new Random();
-
     readonly Options _opts;
     readonly IResultWriter _resultWriter;
     readonly IFileSearcher _searcher;
     readonly int _vpus;
     readonly ArchiveTransferManager _atm;
+    readonly ConcurrentQueue<BackupResult> _resultQueue = new();
 
     internal Program(Options opts)
     {
@@ -35,7 +34,7 @@ public class Program
         _atm = new ArchiveTransferManager(_opts.Credentials, _opts.Region);
     }
 
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         if (args.Length != 8 && args.Length != 9)
         {
@@ -81,9 +80,7 @@ public class Program
             Environment.Exit(2);
         }
 
-        BackupType theBackupType;
-
-        if (!Enum.TryParse<BackupType>(backupType, true, out theBackupType))
+        if (!Enum.TryParse(backupType, true, out BackupType theBackupType))
         {
             Console.WriteLine($"Please specify a valid backup type [Full, Assets, File].");
             Environment.Exit(2);
@@ -117,9 +114,7 @@ public class Program
             Environment.Exit(2);
         }
 
-        OutputType theOutputType;
-
-        if (!Enum.TryParse<OutputType>(outputType, true, out theOutputType))
+        if (!Enum.TryParse(outputType, true, out OutputType theOutputType))
         {
             Console.WriteLine($"Please specify a valid output type [PhotoSql, VideoSql, Csv].");
             Environment.Exit(2);
@@ -145,29 +140,39 @@ public class Program
 
         ServicePointManager.DefaultConnectionLimit = 50;
 
-        program.Execute();
+        await program.ExecuteAsync();
     }
 
-    void Execute()
+    async Task ExecuteAsync()
+    {
+        await BackupFilesAsync();
+
+        WriteResults();
+    }
+
+    void WriteResults()
     {
         _resultWriter.Initialize();
 
-        BackupFiles();
+        while (_resultQueue.TryDequeue(out BackupResult br))
+        {
+            _resultWriter.WriteResult(br);
+        }
 
         _resultWriter.Complete();
     }
 
-    void BackupFiles()
+    async Task BackupFilesAsync()
     {
         var files = _searcher.FindFiles(_opts.BackupSource);
 
         // try to leave a couple threads available for the GC
         var opts = new ParallelOptions { MaxDegreeOfParallelism = _vpus };
 
-        Parallel.ForEach(files, opts, BackupFile);
+        await Parallel.ForEachAsync(files, opts, BackupFileAsync);
     }
 
-    void BackupFile(string file)
+    async ValueTask BackupFileAsync(string file, CancellationToken cancellationToken)
     {
         var backupFile = new BackupFile(file, _opts.RelativeRoot);
 
@@ -186,12 +191,9 @@ public class Program
             {
                 Console.WriteLine($"  - backing up {backupFile.GlacierDescription}{attempt}");
 
-                result.Result = _atm.UploadAsync(_opts.VaultName, backupFile.GlacierDescription, backupFile.FullPath).Result;
+                result.Result = await _atm.UploadAsync(_opts.VaultName, backupFile.GlacierDescription, backupFile.FullPath);
 
-                lock (_lockObj)
-                {
-                    _resultWriter.WriteResult(result);
-                }
+                _resultQueue.Enqueue(result);
 
                 return;
             }
@@ -199,9 +201,7 @@ public class Program
             {
                 Console.WriteLine($"  - error backing up {backupFile.GlacierDescription}{attempt}: {ex.Message}");
 
-                var ms = _rand.Next(START_WAIT_TIME_MS) * i;  // wait for a random amount of time, and increase as the number of tries increases
-
-                Thread.Sleep(ms);
+                await Task.Delay(START_WAIT_TIME_MS * i, cancellationToken);
             }
         }
 
@@ -244,17 +244,13 @@ public class Program
 
     IResultWriter GetResultWriter()
     {
-        switch (_opts.OutputType)
+        return _opts.OutputType switch
         {
-            case OutputType.PhotoSql:
-                return new PhotosPgSqlResultWriter(_opts.Output);
-            case OutputType.VideoSql:
-                return new VideosPgSqlResultWriter(_opts.Output);
-            case OutputType.Csv:
-                return new CsvResultWriter(_opts.Output);
-        }
-
-        throw new InvalidOperationException("This output type is not properly supported");
+            OutputType.PhotoSql => new PhotosPgSqlResultWriter(_opts.Output),
+            OutputType.VideoSql => new VideosPgSqlResultWriter(_opts.Output),
+            OutputType.Csv => new CsvResultWriter(_opts.Output),
+            _ => throw new InvalidOperationException("This output type is not properly supported"),
+        };
     }
 
     int GetVpus()
