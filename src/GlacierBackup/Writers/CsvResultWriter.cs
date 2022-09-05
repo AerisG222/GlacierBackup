@@ -1,24 +1,21 @@
 using System.Globalization;
-using System.IO;
 using CsvHelper;
 
 namespace GlacierBackup.Writers;
 
 public class CsvResultWriter
-    : IResultWriter
+    : BaseResultWriter
 {
-    string _outputPath;
-    StreamWriter _writer;
     CsvWriter _csv;
 
     public CsvResultWriter(string outputPath)
+        : base(outputPath)
     {
-        _outputPath = outputPath;
+
     }
 
-    public void Initialize()
+    protected override void Initialize()
     {
-        _writer = new StreamWriter(new FileStream(_outputPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 8192, FileOptions.None));
         _csv = new CsvWriter(_writer, CultureInfo.CurrentCulture);
 
         _csv.WriteField("region");
@@ -31,7 +28,7 @@ public class CsvResultWriter
         _csv.NextRecord();
     }
 
-    public void WriteResult(BackupResult result)
+    protected override void WriteResult(BackupResult result)
     {
         _csv.WriteField(result.Region.SystemName);
         _csv.WriteField(result.Vault);
@@ -43,16 +40,11 @@ public class CsvResultWriter
         _csv.NextRecord();
     }
 
-    public void Complete()
+    protected override void Complete()
     {
         if (_csv != null)
         {
             _csv.Dispose();
-        }
-
-        if (_writer != null)
-        {
-            _writer.Dispose();
         }
     }
 }

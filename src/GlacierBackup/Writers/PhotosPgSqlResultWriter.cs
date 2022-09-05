@@ -4,11 +4,12 @@ public class PhotosPgSqlResultWriter
     : PgSqlResultWriter
 {
     public PhotosPgSqlResultWriter(string outputPath)
+        : base(outputPath)
     {
-        _outputPath = outputPath;
+
     }
 
-    public override void WriteResult(BackupResult result)
+    protected override void WriteResult(BackupResult result)
     {
         _writer.WriteLine($"    UPDATE photo.photo ");
         _writer.WriteLine($"       SET aws_glacier_vault_id = (SELECT id FROM aws.glacier_vault WHERE region = '{result.Region.SystemName}' AND vault_name = '{result.Vault}'),");

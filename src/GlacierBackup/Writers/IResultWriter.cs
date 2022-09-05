@@ -1,8 +1,8 @@
+using System.Collections.Generic;
+
 namespace GlacierBackup.Writers;
 
 public interface IResultWriter
 {
-    void Initialize();
-    void WriteResult(BackupResult result);
-    void Complete();
-} 
+    void WriteResults(IEnumerable<BackupResult> results);
+}

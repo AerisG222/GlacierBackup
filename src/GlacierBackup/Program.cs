@@ -147,19 +147,7 @@ public class Program
     {
         await BackupFilesAsync();
 
-        WriteResults();
-    }
-
-    void WriteResults()
-    {
-        _resultWriter.Initialize();
-
-        while (_resultQueue.TryDequeue(out BackupResult br))
-        {
-            _resultWriter.WriteResult(br);
-        }
-
-        _resultWriter.Complete();
+        _resultWriter.WriteResults(_resultQueue.ToArray());
     }
 
     async Task BackupFilesAsync()
