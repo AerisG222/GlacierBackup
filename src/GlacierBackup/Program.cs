@@ -1,40 +1,58 @@
 using System;
-using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
-using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 using Amazon;
-using Amazon.Glacier.Transfer;
 using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
-using GlacierBackup.FileSearchers;
-using GlacierBackup.Writers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace GlacierBackup;
 
 public class Program
 {
-    const int RETRY_COUNT = 3;
-    const int START_WAIT_TIME_MS = 5000;
-
-    readonly Options _opts;
-    readonly IResultWriter _resultWriter;
-    readonly IFileSearcher _searcher;
-    readonly int _vpus;
-    readonly ArchiveTransferManager _atm;
-    readonly ConcurrentQueue<BackupResult> _resultQueue = new();
-
-    internal Program(Options opts)
+    public static async Task Main(string[] args)
     {
-        _opts = opts;
-        _searcher = GetFileSearcher();
-        _resultWriter = GetResultWriter();
-        _vpus = GetVpus();
-        _atm = new ArchiveTransferManager(_opts.Credentials, _opts.Region);
+        var host = CreateHostBuilder(args).Build();
+        var log = host.Services.GetRequiredService<ILogger<Program>>();
+        var sw = new Stopwatch();
+
+        try
+        {
+            log.LogInformation("Starting to archive files at {Time}", DateTime.Now);
+
+            sw.Start();
+            await host.RunAsync();
+            sw.Stop();
+        }
+        catch(Exception ex)
+        {
+            log.LogError(ex, "Error encountered running application: {Error}", ex.Message);
+            Environment.Exit(1);
+        }
+
+        log.LogInformation("Completed archiving files, took {Seconds} seconds", sw.Elapsed.TotalSeconds);
+
+        Environment.Exit(0);
     }
 
-    public static async Task Main(string[] args)
+    static IHostBuilder CreateHostBuilder(string[] args)
+    {
+        var opts = GetOptions(args);
+
+        return Host
+            .CreateDefaultBuilder()
+            .ConfigureServices((hostContext, services) =>
+            {
+                services
+                    .AddGlacierBackupServices(opts)
+                    .AddHostedService<Worker>();
+            });
+    }
+
+    static Options GetOptions(string[] args)
     {
         if (args.Length != 8 && args.Length != 9)
         {
@@ -126,7 +144,7 @@ public class Program
             Environment.Exit(2);
         }
 
-        var program = new Program(new Options
+        return new Options
         {
             Credentials = credentials,
             Region = awsRegion,
@@ -136,114 +154,7 @@ public class Program
             RelativeRoot = relativeRoot,
             OutputType = theOutputType,
             Output = output
-        });
-
-        ServicePointManager.DefaultConnectionLimit = 50;
-
-        await program.ExecuteAsync();
-    }
-
-    async Task ExecuteAsync()
-    {
-        await BackupFilesAsync();
-
-        _resultWriter.WriteResults(_resultQueue.ToArray());
-    }
-
-    async Task BackupFilesAsync()
-    {
-        var files = _searcher.FindFiles(_opts.BackupSource);
-
-        // try to leave a couple threads available for the GC
-        var opts = new ParallelOptions { MaxDegreeOfParallelism = _vpus };
-
-        await Parallel.ForEachAsync(files, opts, BackupFileAsync);
-    }
-
-    async ValueTask BackupFileAsync(string file, CancellationToken cancellationToken)
-    {
-        var backupFile = new BackupFile(file, _opts.RelativeRoot);
-
-        var result = new BackupResult
-        {
-            Region = _opts.Region,
-            Vault = _opts.VaultName,
-            Backup = backupFile
         };
-
-        for (var i = 1; i <= RETRY_COUNT; i++)
-        {
-            var attempt = i > 1 ? $" (attempt {i})" : string.Empty;
-
-            try
-            {
-                Console.WriteLine($"  - backing up {backupFile.GlacierDescription}{attempt}");
-
-                result.Result = await _atm.UploadAsync(_opts.VaultName, backupFile.GlacierDescription, backupFile.FullPath);
-
-                _resultQueue.Enqueue(result);
-
-                return;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"  - error backing up {backupFile.GlacierDescription}{attempt}: {ex.Message}");
-
-                await Task.Delay(START_WAIT_TIME_MS * i, cancellationToken);
-            }
-        }
-
-        Console.WriteLine($" ** unable to backup {backupFile.GlacierDescription} **");
-    }
-
-    IFileSearcher GetFileSearcher()
-    {
-        switch (_opts.BackupType)
-        {
-            case BackupType.Assets:
-                {
-                    if (string.Equals(_opts.VaultName, "photos", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return new PhotoAssetFileSearcher();
-                    }
-                    if (string.Equals(_opts.VaultName, "videos", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return new VideoAssetFileSearcher();
-                    }
-
-                    throw new ApplicationException($"Unknown Asset Type for vault { _opts.VaultName }");
-                }
-            case BackupType.Full:
-                {
-                    return new AllFileSearcher();
-                }
-            case BackupType.File:
-                {
-                    return new SingleFileSearcher();
-                }
-            case BackupType.List:
-                {
-                    return new ListFileSearcher();
-                }
-        }
-
-        throw new InvalidOperationException("This backup type is not properly supported");
-    }
-
-    IResultWriter GetResultWriter()
-    {
-        return _opts.OutputType switch
-        {
-            OutputType.PhotoSql => new PhotosPgSqlResultWriter(_opts.Output),
-            OutputType.VideoSql => new VideosPgSqlResultWriter(_opts.Output),
-            OutputType.Csv => new CsvResultWriter(_opts.Output),
-            _ => throw new InvalidOperationException("This output type is not properly supported"),
-        };
-    }
-
-    int GetVpus()
-    {
-        return Math.Max(1, Environment.ProcessorCount - 1);
     }
 
     static void ShowUsage()
