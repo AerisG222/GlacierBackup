@@ -6,6 +6,7 @@ using Amazon.Glacier.Transfer;
 using GlacierBackup.FileSearchers;
 using GlacierBackup.Writers;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace GlacierBackup;
 
@@ -16,6 +17,7 @@ public class Worker
     const int START_WAIT_TIME_MS = 5000;
 
     readonly Options _opts;
+    readonly ILogger _log;
     readonly IResultWriter _resultWriter;
     readonly IFileSearcher _searcher;
     readonly ArchiveTransferManager _atm;
@@ -23,12 +25,14 @@ public class Worker
 
     public Worker(
         IHostApplicationLifetime appLifetime,
+        ILogger<Worker> log,
         Options opts,
         IFileSearcher searcher,
         IResultWriter writer,
         ArchiveTransferManager atm
     ) {
         _appLifetime = appLifetime ?? throw new ArgumentNullException(nameof(appLifetime));
+        _log = log ?? throw new ArgumentNullException(nameof(log));
         _opts = opts ?? throw new ArgumentNullException(nameof(opts));
         _searcher = searcher ?? throw new ArgumentNullException(nameof(searcher));
         _resultWriter = writer ?? throw new ArgumentNullException(nameof(writer));
@@ -80,7 +84,7 @@ public class Worker
 
             try
             {
-                Console.WriteLine($"  - backing up {backupFile.GlacierDescription}{attempt}");
+                _log.LogInformation("Backing up {File} {Attempt}", backupFile.GlacierDescription, attempt);
 
                 result.Result = await _atm.UploadAsync(_opts.VaultName, backupFile.GlacierDescription, backupFile.FullPath);
 
@@ -88,13 +92,13 @@ public class Worker
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"  - error backing up {backupFile.GlacierDescription}{attempt}: {ex.Message}");
+                _log.LogError(ex, "Error backing up {File} {Attempt} - {Error}", backupFile.GlacierDescription, attempt, ex.Message);
 
                 await Task.Delay(START_WAIT_TIME_MS * i, stoppingToken);
             }
         }
 
-        Console.WriteLine($" ** unable to backup {backupFile.GlacierDescription} **");
+        _log.LogError("** unable to backup {File} **", backupFile.GlacierDescription);
 
         return result;
     }
