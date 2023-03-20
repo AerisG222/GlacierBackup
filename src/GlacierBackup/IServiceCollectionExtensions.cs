@@ -28,13 +28,16 @@ public static class IServiceCollectionExtensions
                 {
                     services.AddSingleton<IFileSearcher, PhotoAssetFileSearcher>();
                 }
-
-                if (string.Equals(opts.VaultName, "videos", StringComparison.OrdinalIgnoreCase))
+                else if (string.Equals(opts.VaultName, "videos", StringComparison.OrdinalIgnoreCase))
                 {
                     services.AddSingleton<IFileSearcher, VideoAssetFileSearcher>();
                 }
+                else
+                {
+                    throw new ApplicationException($"Unknown Asset Type for vault {opts.VaultName}");
+                }
 
-                throw new ApplicationException($"Unknown Asset Type for vault {opts.VaultName}");
+                break;
             case BackupType.Full:
                 services.AddSingleton<IFileSearcher, AllFileSearcher>();
                 break;
